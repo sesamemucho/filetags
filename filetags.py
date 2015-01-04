@@ -12,20 +12,30 @@
 ## ===================================================================== ##
 
 ## NOTE: in case of issues, check iCalendar files using: http://icalvalid.cloudapp.net/
+from __future__ import print_function
+from __future__ import unicode_literals
+import sys
+
+# True if we are running on Python 3.
+PY3 = sys.version_info[0] == 3
 
 import re
-import sys
 import os
-import os.path   # for directory traversal to look for .tagfiles
 import time
 import logging
 import operator  # for sorting dicts
 import difflib   # for good enough matching words
-from sets import Set  # to find out union/intersection of tag sets
 import readline  # for raw_input() reading from stdin
 import codecs    # for handling Unicode content in .tagfiles
 from optparse import OptionParser
 
+if PY3:
+    Set = set
+    tags_type = type({}.keys())
+else:
+    from sets import Set  # to find out union/intersection of tag sets
+    tags_type = list
+    
 PROG_VERSION_NUMBER = u"0.3"
 PROG_VERSION_DATE = u"2015-01-02"
 INVOCATION_TIME = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
@@ -307,8 +317,7 @@ def extract_tags_from_argument(argument):
     assert argument.__class__ == str or \
         argument.__class__ == unicode
 
-    return argument.split(unicode(BETWEEN_TAG_SEPARATOR))
-
+    return argument.split(BETWEEN_TAG_SEPARATOR)
 
 def extract_filenames_from_argument(argument):
     """
@@ -394,7 +403,7 @@ def get_tags_from_files_and_subfolders():
 
     tags = {}
 
-    cwd = os.getcwdu()
+    cwd = os.getcwd()
     for root, dirs, files in os.walk(cwd):
         for filename in files:
             for tag in extract_tags_from_filename(filename):
@@ -417,7 +426,7 @@ def find_similar_tags(tag, tags):
 
     assert tag.__class__ == str or \
         tag.__class__ == unicode
-    assert tags.__class__ == list
+    assert tags.__class__ == tags_type
 
     similar_tags = difflib.get_close_matches(tag, tags, n=999, cutoff=0.7)
     close_but_not_exact_matches = []
@@ -440,7 +449,7 @@ def list_tags_by_alphabet(only_with_similar_tags=False):
 
     tag_dict = get_tags_from_files_and_subfolders()
     if not tag_dict:
-        print "\nNo file containing tags found in this folder hierarchy.\n"
+        print("\nNo file containing tags found in this folder hierarchy.\n")
         return {}
 
     ## determine maximum length of strings for formatting:
@@ -450,7 +459,7 @@ def list_tags_by_alphabet(only_with_similar_tags=False):
         maxlength_count = 5
 
     print("\n  {0:{1}s} : count".format(u'tag', maxlength_tags))
-    print "  " + "-" * (maxlength_tags + maxlength_count + 3)
+    print("  " + "-" * (maxlength_tags + maxlength_count + 3))
 
     ## sort dict of (tag, count) according to tag name
     for tuple in sorted(tag_dict.items(), key=operator.itemgetter(0)):
@@ -463,13 +472,13 @@ def list_tags_by_alphabet(only_with_similar_tags=False):
             see_also = u'      (similar to:  ' + ', '.join(close_matches) + u')'
 
         if (only_with_similar_tags and len(close_matches) > 0) or not only_with_similar_tags:
-            print "  {0:{1}s} : {2:{3}}{4}".format(tuple[0], maxlength_tags, tuple[1], maxlength_count, see_also)
+            print("  {0:{1}s} : {2:{3}}{4}".format(tuple[0], maxlength_tags, tuple[1], maxlength_count, see_also))
 
         if only_with_similar_tags and len(close_matches) == 0:
             ## remove entries from dict for returning only tags with similar tag entries:
             del tag_dict[tuple[0]]
 
-    print ''
+    print('')
 
     return tag_dict
 
@@ -484,7 +493,7 @@ def list_tags_by_number(max_tag_count=0):
 
     tag_dict = get_tags_from_files_and_subfolders()
     if not tag_dict:
-        print "\nNo file containing tags found in this folder hierarchy.\n"
+        print("\nNo file containing tags found in this folder hierarchy.\n")
         return {}
 
     ## determine maximum length of strings for formatting:
@@ -493,17 +502,17 @@ def list_tags_by_number(max_tag_count=0):
     if maxlength_count < 5:
         maxlength_count = 5
 
-    print "\n {0:{1}} : {2:{3}}".format(u'count', maxlength_count, u'tag', maxlength_tags)
-    print " " + '-' * (maxlength_tags + maxlength_count + 7)
+    print("\n {0:{1}} : {2:{3}}".format(u'count', maxlength_count, u'tag', maxlength_tags))
+    print(" " + '-' * (maxlength_tags + maxlength_count + 7))
     for tuple in sorted(tag_dict.items(), key=operator.itemgetter(1)):
         ## sort dict of (tag, count) according to count
         if (max_tag_count > 0 and tuple[1] <= max_tag_count) or max_tag_count == 0:
-            print " {0:{1}} : {2:{3}}".format(tuple[1], maxlength_count, tuple[0], maxlength_tags)
+            print(" {0:{1}} : {2:{3}}".format(tuple[1], maxlength_count, tuple[0], maxlength_tags))
 
         if max_tag_count > 0 and tuple[1] > max_tag_count:
             ## remove entries that exceed max_tag_count limit:
             del tag_dict[tuple[0]]
-    print ''
+    print('')
 
     return tag_dict
 
@@ -521,13 +530,13 @@ def handle_tag_gardening():
 
     tag_dict = get_tags_from_files_and_subfolders()
     if not tag_dict:
-        print "\nNo file containing tags found in this folder hierarchy.\n"
+        print("\nNo file containing tags found in this folder hierarchy.\n")
         return
 
-    print "\nTags that appear only once are most probably typos or you have forgotten them:"
+    print("\nTags that appear only once are most probably typos or you have forgotten them:")
     tags_by_number = list_tags_by_number(max_tag_count=1)
 
-    print "Tags which have similar other tags are probably typos or plural/singular forms of others:"
+    print("Tags which have similar other tags are probably typos or plural/singular forms of others:")
     tags_by_alphabet = list_tags_by_alphabet(only_with_similar_tags=True)
 
     set_by_number = Set(tags_by_number.keys())
@@ -535,8 +544,8 @@ def handle_tag_gardening():
     tags_in_both_outputs = set_by_number & set_by_alphabet  # intersection of sets
 
     if tags_in_both_outputs != Set([]):
-        print "If tags appear in both lists from above, they most likely require your attention:"
-
+        print("If tags appear in both lists from above, they most likely require your attention:")
+        
         ## determine maximum length of strings for formatting:
         maxlength_tags = max(len(s) for s in tags_in_both_outputs)
         maxlength_count = len(str(abs(max(tag_dict.values()))))
@@ -544,11 +553,11 @@ def handle_tag_gardening():
             maxlength_count = 5
 
         print("\n  {0:{1}s} : count".format(u'tag', maxlength_tags))
-        print "  " + "-" * (maxlength_tags + maxlength_count + 3)
+        print("  " + "-" * (maxlength_tags + maxlength_count + 3))
         for tag in sorted(tags_in_both_outputs):
             similar_tags = u'      (similar to:  ' + ', '.join(find_similar_tags(tag, tag_dict.keys())) + u')'
-            print "  {0:{1}s} : {2:{3}}  {4}".format(tag, maxlength_tags, tags_by_number[tag], maxlength_count, similar_tags)
-        print
+            print("  {0:{1}s} : {2:{3}}  {4}".format(tag, maxlength_tags, tags_by_number[tag], maxlength_count, similar_tags))
+        print()
 
 
 def locate_file_in_cwd_and_parent_directories(filename):
@@ -563,17 +572,17 @@ def locate_file_in_cwd_and_parent_directories(filename):
         logging.debug('found \"%s\" in current working directory' % filename)
         return filename
     else:
-        starting_dir = os.getcwdu()
+        starting_dir = os.getcwd()
         parent_dir = os.path.abspath(os.path.join(starting_dir, os.pardir))
         logging.debug('looking for \"%s\" in directory \"%s\" ...' % (filename, parent_dir))
-        while parent_dir != os.getcwdu():
+        while parent_dir != os.getcwd():
             os.chdir(parent_dir)
-            filename_to_look_for = os.path.abspath(os.path.join(os.getcwdu(), filename))
+            filename_to_look_for = os.path.abspath(os.path.join(os.getcwd(), filename))
             if os.path.isfile(filename_to_look_for):
                 logging.debug('found \"%s\" in directory \"%s\"' % (filename, parent_dir))
                 os.chdir(starting_dir)
                 return filename_to_look_for
-            parent_dir = os.path.abspath(os.path.join(os.getcwdu(), os.pardir))
+            parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
         os.chdir(starting_dir)
         logging.debug('did NOT find \"%s\" in current directory or any parent directory')
         return False
@@ -601,13 +610,12 @@ def locate_and_parse_controlled_vocabulary():
     else:
         return False
 
-
 def main():
     """Main function"""
 
     if options.version:
-        print os.path.basename(sys.argv[0]) + " version " + PROG_VERSION_NUMBER + \
-            " from " + PROG_VERSION_DATE
+        print(os.path.basename(sys.argv[0]) + " version " + PROG_VERSION_NUMBER + \
+            " from " + PROG_VERSION_DATE)
         sys.exit(0)
 
     handle_logging()
@@ -658,13 +666,13 @@ def main():
             # Use the tab key for completion
             readline.parse_and_bind('tab: complete')
 
-        print "                 "
-        print "Please enter one or more tags (separated by \"" + BETWEEN_TAG_SEPARATOR + "\")     (abort with Ctrl-C)"
-        print "                     "
-        print "        ,---------.  "
-        print "        |  ?     o | "
-        print "        `---------'  "
-        print "                     "
+        print("                 ")
+        print("Please enter one or more tags (separated by \"" + BETWEEN_TAG_SEPARATOR + "\")     (abort with Ctrl-C)")
+        print("                     ")
+        print("        ,---------.  ")
+        print("        |  ?     o | ")
+        print("        `---------'  ")
+        print("                     ")
 
         if options.remove:
             logging.info("Interactive mode: tags get REMOVED from file names ...")

@@ -4,7 +4,8 @@
 
 ## invoke tests using following command line:
 ## ~/src/vktag % PYTHONPATH="~/src/filetags:" tests/unit_tests.py --verbose
-
+from __future__ import print_function
+from __future__ import unicode_literals
 import unittest
 import os
 import filetags
@@ -83,7 +84,7 @@ class TestFileWithoutTags(unittest.TestCase):
         ## create temporary directory:
         self.tempdir = tempfile.mkdtemp()
         os.chdir(self.tempdir)
-        print "\ntemporary directory: " + self.tempdir
+        print("\ntemporary directory: " + self.tempdir)
 
         ## create set of test files:
         self.create_tmp_file(self.testfilename)
